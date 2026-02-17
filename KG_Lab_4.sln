@@ -1,9 +1,14 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.14.36429.23
+# Visual Studio Version 18
+VisualStudioVersion = 18.4.11506.43 insiders
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "KG_Laba_4", "KG_Laba_4.vcxproj", "{B590A678-E935-4AED-AF1F-3B6D02A4AE95}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "KG_Lab_4", "KG_Laba_4.vcxproj", "{B590A678-E935-4AED-AF1F-3B6D02A4AE95}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{59EFF5A9-8C93-41F2-8782-3DD8F9C1FC27}"
+	ProjectSection(SolutionItems) = preProject
+		Models\sponza.obj = Models\sponza.obj
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

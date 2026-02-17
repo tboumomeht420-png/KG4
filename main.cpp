@@ -11,7 +11,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE prevInstance,
     try
     {
 
-        BoxApp theApp(hInstance, "");
+        BoxApp theApp(hInstance, "Models/sponza.obj");
+        theApp.ApplyCameraPreset(1);
         if (!theApp.Initialize())
             return 0;
 

@@ -20,7 +20,8 @@ public:
 
     static bool LoadObjFile(const std::string& filename,
         std::vector<XMFLOAT3>& positions,
-        std::vector<uint32_t>& indices)  // uint32_t вместо uint16_t
+        std::vector<XMFLOAT3>& normals,
+        std::vector<uint32_t>& indices)
     {
         std::ifstream file(filename);
         if (!file.is_open())
@@ -46,7 +47,6 @@ public:
             }
         };
 
-        // Хеш-функция для дедупликации вершин
         struct FaceVertexHash
         {
             size_t operator()(const FaceVertex& fv) const
@@ -69,25 +69,25 @@ public:
             std::string prefix;
             iss >> prefix;
 
-            if (prefix == "v") // Vertex position
+            if (prefix == "v")
             {
                 XMFLOAT3 pos;
                 iss >> pos.x >> pos.y >> pos.z;
                 tempPositions.push_back(pos);
             }
-            else if (prefix == "vn") // Vertex normal
+            else if (prefix == "vn")
             {
                 XMFLOAT3 norm;
                 iss >> norm.x >> norm.y >> norm.z;
                 tempNormals.push_back(norm);
             }
-            else if (prefix == "vt") // Texture coordinate
+            else if (prefix == "vt")
             {
                 XMFLOAT2 tex;
                 iss >> tex.x >> tex.y;
                 tempTexCoords.push_back(tex);
             }
-            else if (prefix == "f") // Face
+            else if (prefix == "f")
             {
                 std::string vertex1, vertex2, vertex3;
                 iss >> vertex1 >> vertex2 >> vertex3;
@@ -125,23 +125,34 @@ public:
                 FaceVertex fv2 = parseFaceVertex(vertex2);
                 FaceVertex fv3 = parseFaceVertex(vertex3);
 
-                // Обработка каждой вершины треугольника с дедупликацией
                 auto processVertex = [&](const FaceVertex& fv)
                     {
                         auto it = vertexMap.find(fv);
                         if (it != vertexMap.end())
                         {
-                            // Вершина уже существует - используем её индекс
                             indices.push_back(it->second);
                         }
                         else
                         {
-                            // Новая вершина
-                            int posIdx = fv.posIndex - 1;  // OBJ индексы с 1
+                            int posIdx = fv.posIndex - 1;
+                            int normIdx = fv.normIndex - 1;
+
                             if (posIdx >= 0 && posIdx < tempPositions.size())
                             {
                                 uint32_t newIndex = static_cast<uint32_t>(positions.size());
                                 positions.push_back(tempPositions[posIdx]);
+
+
+                                if (normIdx >= 0 && normIdx < tempNormals.size())
+                                {
+                                    normals.push_back(tempNormals[normIdx]);
+                                }
+                                else
+                                {
+
+                                    normals.push_back(XMFLOAT3(0.0f, 1.0f, 0.0f));
+                                }
+
                                 vertexMap[fv] = newIndex;
                                 indices.push_back(newIndex);
                             }
@@ -157,4 +168,5 @@ public:
         file.close();
         return !positions.empty();
     }
+
 };

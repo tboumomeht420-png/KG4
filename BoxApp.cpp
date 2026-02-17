@@ -21,7 +21,7 @@ bool BoxApp::Initialize()
     BuildConstantBuffers();
     BuildRootSignature();
     BuildShadersAndInputLayout();
-    BuildGeometryFromObj(mObjFilePath);  // Используем сохраненный путь
+    BuildGeometryFromObj(mObjFilePath);
     BuildPSO();
 
     ThrowIfFailed(mCommandList->Close());
@@ -38,7 +38,7 @@ void BoxApp::OnResize()
 {
     D3DApp::OnResize();
 
-    XMMATRIX P = XMMatrixPerspectiveFovLH(0.25f * MathHelper::Pi, AspectRatio(), 1.0f, 1000.0f);
+    XMMATRIX P = XMMatrixPerspectiveFovLH(0.25f * MathHelper::Pi, AspectRatio(), 1.0f, 5000.0f);
     XMStoreFloat4x4(&mProj, P);
 }
 
@@ -48,9 +48,14 @@ void BoxApp::Update(const GameTimer& gt)
     float z = mRadius * sinf(mPhi) * sinf(mTheta);
     float y = mRadius * cosf(mPhi);
 
-    XMVECTOR pos = XMVectorSet(x, y, z, 1.0f);
-    XMVECTOR target = XMVectorZero();
+
+    XMVECTOR target = XMLoadFloat3(&mTarget);
+
+
+    XMVECTOR pos = XMVectorAdd(target, XMVectorSet(x, y, z, 1.0f));
+
     XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+
 
     XMMATRIX view = XMMatrixLookAtLH(pos, target, up);
     XMStoreFloat4x4(&mView, view);
@@ -62,6 +67,24 @@ void BoxApp::Update(const GameTimer& gt)
     ObjectConstants objConstants;
     XMStoreFloat4x4(&objConstants.WorldViewProj, XMMatrixTranspose(worldViewProj));
     mObjectCB->CopyData(0, objConstants);
+}
+
+void BoxApp::SetCameraTarget(float x, float y, float z)
+{
+    mTarget = XMFLOAT3(x, y, z);
+}
+
+void BoxApp::ApplyCameraPreset(int presetId)
+{
+    switch (presetId)
+    {
+    case 1:
+        SetCameraTarget(0.0f, 50.0f, 0.0f);
+        break;
+
+    default:
+        break;
+    }
 }
 
 void BoxApp::Draw(const GameTimer& gt)
@@ -281,9 +304,10 @@ void BoxApp::BuildGeometryFromObj(const std::string& filename)
     }
 
     std::vector<XMFLOAT3> positions;
-    std::vector<std::uint32_t> indices;  // uint32_t!
+    std::vector<XMFLOAT3> normals;
+    std::vector<std::uint32_t> indices;
 
-    bool loadSuccess = ObjLoader::LoadObjFile(filename, positions, indices);
+    bool loadSuccess = ObjLoader::LoadObjFile(filename, positions, normals, indices);
 
     if (!loadSuccess)
     {
@@ -294,14 +318,31 @@ void BoxApp::BuildGeometryFromObj(const std::string& filename)
     std::vector<Vertex> vertices;
     vertices.reserve(positions.size());
 
-    for (const auto& pos : positions)
+
+    XMVECTOR lightDir = XMVector3Normalize(XMVectorSet(1.0f, 1.0f, 1.0f, 0.0f));
+
+    for (size_t i = 0; i < positions.size(); ++i)
     {
+        const auto& pos = positions[i];
+        const auto& norm = normals[i];
+
+
+        XMVECTOR normal = XMLoadFloat3(&norm);
+        float diffuse = XMVectorGetX(XMVector3Dot(normal, lightDir));
+        diffuse = max(0.0f, diffuse);
+
+
+        float ambient = 0.3f;
+        float intensity = ambient + (1.0f - ambient) * diffuse;
+
+
         XMFLOAT4 color = XMFLOAT4(
-            (pos.x + 1.0f) * 0.5f,
-            (pos.y + 1.0f) * 0.5f,
-            (pos.z + 1.0f) * 0.5f,
+            0.8f * intensity,
+            0.8f * intensity,
+            0.8f * intensity,
             1.0f
         );
+
         vertices.push_back({ pos, color });
     }
 
@@ -325,7 +366,7 @@ void BoxApp::BuildGeometryFromObj(const std::string& filename)
 
     mBoxGeo->VertexByteStride = sizeof(Vertex);
     mBoxGeo->VertexBufferByteSize = vbByteSize;
-    mBoxGeo->IndexFormat = DXGI_FORMAT_R32_UINT;  // Изменено с R16_UINT!
+    mBoxGeo->IndexFormat = DXGI_FORMAT_R32_UINT;
     mBoxGeo->IndexBufferByteSize = ibByteSize;
 
     SubmeshGeometry submesh;
